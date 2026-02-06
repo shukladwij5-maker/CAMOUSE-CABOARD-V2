@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Guitar - Diagnostics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .test-box h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        video {
+            max-width: 100%;
+            background: black;
+            border-radius: 5px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎸 Digital Guitar - Diagnostics</h1>
+    <p>This page will help identify why the app isn't working on your PC.</p>
+
+    <!-- Browser Info -->
+    <div class="test-box">
+        <h3>1. Browser Information</h3>
+        <div id="browserInfo"></div>
+    </div>
+
+    <!-- HTTPS/Security -->
+    <div class="test-box">
+        <h3>2. Security (HTTPS/Localhost)</h3>
+        <div id="securityInfo"></div>
+    </div>
+
+    <!-- Camera Hardware -->
+    <div class="test-box">
+        <h3>3. Camera Hardware Test</h3>
+        <button onclick="testCamera()">Test Camera Access</button>
+        <div id="cameraStatus"></div>
+        <video id="testVideo" width="320" height="240" style="display:none;"></video>
+    </div>
+
+    <!-- Audio Context -->
+    <div class="test-box">
+        <h3>4. Web Audio API Test</h3>
+        <button onclick="testAudio()">Test Audio</button>
+        <div id="audioStatus"></div>
+    </div>
+
+    <!-- MediaPipe Loading -->
+    <div class="test-box">
+        <h3>5. MediaPipe Libraries</h3>
+        <div id="mediapipeStatus">
+            <p>Testing MediaPipe CDN...</p>
+        </div>
+    </div>
+
+    <!-- WebGL -->
+    <div class="test-box">
+        <h3>6. WebGL Support</h3>
+        <div id="webglStatus"></div>
+    </div>
+
+    <!-- Console Log -->
+    <div class="test-box">
+        <h3>7. Console Output</h3>
+        <pre id="consoleLogs"></pre>
+    </div>
+
+    <script>
+        // Capture console logs
+        const consoleLogs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            consoleLogs.push('LOG: ' + args.join(' '));
+            originalLog.apply(console, args);
+            updateConsoleLogs();
+        };
+
+        console.error = function(...args) {
+            consoleLogs.push('ERROR: ' + args.join(' '));
+            originalError.apply(console, args);
+            updateConsoleLogs();
+        };
+
+        console.warn = function(...args) {
+            consoleLogs.push('WARN: ' + args.join(' '));
+            originalWarn.apply(console, args);
+            updateConsoleLogs();
+        };
+
+        function updateConsoleLogs() {
+            document.getElementById('consoleLogs').textContent = consoleLogs.slice(-20).join('\n');
+        }
+
+        // 1. Browser Info
+        function testBrowser() {
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Platform': navigator.platform,
+                'Language': navigator.language,
+                'Online': navigator.onLine ? 'Yes' : 'No'
+            };
+
+            let html = '<div class="status info">Browser detected:</div>';
+            for (let [key, value] of Object.entries(info)) {
+                html += `<p><strong>${key}:</strong> ${value}</p>`;
+            }
+            document.getElementById('browserInfo').innerHTML = html;
+        }
+
+        // 2. Security
+        function testSecurity() {
+            const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+
+            let html = '';
+            if (isSecure) {
+                html += `<div class="status success">✓ Secure connection (${protocol}//${hostname})</div>`;
+            } else {
+                html += `<div class="status error">✗ Not secure! (${protocol}//${hostname})</div>`;
+                html += '<p>Camera access requires HTTPS or localhost. Try accessing via: <code>http://localhost:8000</code></p>';
+            }
+            document.getElementById('securityInfo').innerHTML = html;
+        }
+
+        // 3. Camera Test
+        async function testCamera() {
+            const status = document.getElementById('cameraStatus');
+            status.innerHTML = '<div class="status info">Requesting camera access...</div>';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 },
+                    audio: false
+                });
+                
+                document.getElementById('testVideo').srcObject = stream;
+                document.getElementById('testVideo').style.display = 'block';
+                
+                status.innerHTML = '<div class="status success">✓ Camera access granted!</div>' +
+                    '<p>Your camera is working. Video stream is displayed above.</p>';
+                
+                // Stop stream after 5 seconds
+                setTimeout(() => {
+                    stream.getTracks().forEach(track => track.stop());
+                    document.getElementById('testVideo').style.display = 'none';
+                }, 5000);
+            } catch (error) {
+                status.innerHTML = '<div class="status error">✗ Camera access failed!</div>' +
+                    '<p><strong>Error:</strong> ' + error.message + '</p>' +
+                    '<p><strong>Troubleshooting:</strong></p>' +
+                    '<ul>' +
+                    '<li>Check if browser has camera permission</li>' +
+                    '<li>Go to browser settings → Privacy → Camera and allow this site</li>' +
+                    '<li>Make sure no other app is using the camera</li>' +
+                    '<li>Try a different browser (Chrome recommended)</li>' +
+                    '<li>Restart your computer if camera driver has issues</li>' +
+                    '</ul>';
+            }
+        }
+
+        // 4. Audio Test
+        function testAudio() {
+            const status = document.getElementById('audioStatus');
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioContext.state === 'suspended') {
+                    status.innerHTML = '<div class="status warning">⚠ Audio context suspended</div>' +
+                        '<p>Click anywhere on the page to enable audio, then try again.</p>';
+                    document.addEventListener('click', () => audioContext.resume());
+                } else {
+                    // Play test tone
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioContext.destination);
+                    
+                    osc.frequency.value = 440;
+                    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    
+                    osc.start(audioContext.currentTime);
+                    osc.stop(audioContext.currentTime + 0.5);
+                    
+                    status.innerHTML = '<div class="status success">✓ Web Audio API working!</div>' +
+                        '<p>You should have heard a beep. If you did, audio synthesis works.</p>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">✗ Web Audio API failed!</div>' +
+                    '<p><strong>Error:</strong> ' + error.message + '</p>';
+            }
+        }
+
+        // 5. MediaPipe Test
+        async function testMediaPipe() {
+            const status = document.getElementById('mediapipeStatus');
+            status.innerHTML = '<div class="status info">Loading MediaPipe...</div>';
+            
+            try {
+                // Test Camera Utils
+                const script1 = document.createElement('script');
+                script1.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+                script1.onload = () => {
+                    console.log('✓ Camera Utils loaded');
+                    
+                    // Test Drawing Utils
+                    const script2 = document.createElement('script');
+                    script2.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js';
+                    script2.onload = () => {
+                        console.log('✓ Drawing Utils loaded');
+                        
+                        // Test Hands
+                        const script3 = document.createElement('script');
+                        script3.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+                        script3.onload = () => {
+                            console.log('✓ Hands model loaded');
+                            status.innerHTML = '<div class="status success">✓ All MediaPipe libraries loaded!</div>';
+                        };
+                        script3.onerror = () => {
+                            console.error('✗ Failed to load Hands');
+                            status.innerHTML += '<div class="status error">✗ Hands model failed to load</div>';
+                        };
+                        document.head.appendChild(script3);
+                    };
+                    script2.onerror = () => {
+                        console.error('✗ Failed to load Drawing Utils');
+                        status.innerHTML += '<div class="status error">✗ Drawing Utils failed to load</div>';
+                    };
+                    document.head.appendChild(script2);
+                };
+                script1.onerror = () => {
+                    console.error('✗ Failed to load Camera Utils');
+                    status.innerHTML = '<div class="status error">✗ Camera Utils failed to load</div>' +
+                        '<p>Check your internet connection or try a different CDN.</p>';
+                };
+                document.head.appendChild(script1);
+            } catch (error) {
+                status.innerHTML = '<div class="status error">✗ MediaPipe test failed!</div>' +
+                    '<p><strong>Error:</strong> ' + error.message + '</p>';
+            }
+        }
+
+        // 6. WebGL Test
+        function testWebGL() {
+            const status = document.getElementById('webglStatus');
+            
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown';
+                    const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
+                    
+                    status.innerHTML = '<div class="status success">✓ WebGL is supported!</div>' +
+                        '<p><strong>Vendor:</strong> ' + vendor + '</p>' +
+                        '<p><strong>Renderer:</strong> ' + renderer + '</p>';
+                } else {
+                    status.innerHTML = '<div class="status error">✗ WebGL not supported</div>' +
+                        '<p>Your browser or GPU doesn\'t support WebGL.</p>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">✗ WebGL test failed!</div>' +
+                    '<p><strong>Error:</strong> ' + error.message + '</p>';
+            }
+        }
+
+        // Run all tests on load
+        window.addEventListener('load', () => {
+            testBrowser();
+            testSecurity();
+            testWebGL();
+            testMediaPipe();
+            
+            console.log('All diagnostic tests loaded');
+        });
+    </script>
+</body>
+</html>

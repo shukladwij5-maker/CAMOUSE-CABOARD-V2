@@ -1,0 +1,8 @@
+{
+    "name": "Virtual Hand Mouse",
+    "description": "Control your computer using hand gestures in the air!",
+    "icon": "🖐️",
+    "version": "1.0.0",
+    "category": "Utilities",
+    "main": "index.html"
+}
