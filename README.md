@@ -1,4 +1,4 @@
-# Virtual Hand Mouse 🖐️
+# Virtual Hand Mouse (and keyboard)🖐️
 
 A web-based virtual mouse application that uses hand detection via webcam to control a cursor in a sandbox environment and optionally control the actual system cursor.
 
@@ -71,3 +71,4 @@ camtar/
 - **MediaPipe**: Hand tracking framework
 - **PyAutoGUI**: System-level automation (Python)
 - **Web Audio API**: Audio feedback
+
